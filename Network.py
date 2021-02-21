@@ -44,7 +44,20 @@ class Network:
     def add(self, layer):
         self.layers.append(layer)
 
+    def predict(self, X):
+        output = X
+        for layer in self.layers:
+            output = layer.forward(output)
+        return output
+
+
 
 
 model = Network()
-model.add(Dense(10, 10, activation=linear))
+model.add(Dense(100, 50, activation=linear))
+model.add(Dense(50, 2, activation=linear))
+
+
+batch = np.random.randint(low=-2, high=2, size=(5,100))
+Y = model.predict(batch)
+print(Y)
