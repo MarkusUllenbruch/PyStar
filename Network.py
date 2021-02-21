@@ -12,11 +12,16 @@ class Layer:
     def forward(self, input):
         raise NotImplementedError
 
-def linear(x):
-    return x
 
-def linear_prime(x):
-    return 1.0
+class Linear:
+    def __init__(self):
+        pass
+
+    def __call__(self, x):
+        return x
+
+    def derivative(self):
+        return 1.0
 
 class Dense(Layer):
     def __init__(self, input_neurons, output_neurons, activation):
@@ -26,7 +31,6 @@ class Dense(Layer):
         self.bias = np.random.rand(1, output_neurons) - 0.5
 
     def forward(self, inputs):
-        # inputs muss size haben: (1, input_neurons)
 
         self.input = inputs
         self.z = np.dot(self.input, self.weights) + self.bias
@@ -50,14 +54,19 @@ class Network:
             output = layer.forward(output)
         return output
 
+    def fit(self, X, y, epochs, mini_batch_size, learning_rate):
+        pass
 
+    def backprop(self, x, y):
+        pass
 
 
 model = Network()
-model.add(Dense(100, 50, activation=linear))
-model.add(Dense(50, 2, activation=linear))
+model.add(Dense(100, 50, activation=Linear()))
+model.add(Dense(50, 50, activation=Linear()))
+model.add(Dense(50, 2, activation=Linear()))
 
 
 batch = np.random.randint(low=-2, high=2, size=(5,100))
 Y = model.predict(batch)
-print(Y)
+print(Y.shape)
