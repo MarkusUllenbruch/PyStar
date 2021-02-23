@@ -37,14 +37,14 @@ class Dense(Layer):
     def __init__(self, input_neurons, output_neurons, activation):
         super().__init__()
         self.activation = activation
-        self.weights = np.random.rand(input_neurons, output_neurons) - 0.5
-        #print('WEIGHTS  ',self.weights.shape)
-        self.bias = np.random.rand(1, output_neurons) - 0.5
+        self.weights = np.random.rand(output_neurons, input_neurons) - 0.5
+        self.bias = np.random.rand(output_neurons, 1) - 0.5
 
     def forward(self, inputs):
 
         self.input = inputs
-        self.z = np.dot(self.input, self.weights) + self.bias
+        self.z = np.dot(self.weights, self.input)
+        self.z = self.z + np.tile(self.bias, (1, self.z.shape[1]))
         self.a = self.activation(self.z)
         return self.a
 
@@ -77,10 +77,9 @@ class Network:
         # Split whole Batch in Mini-Batches
         mini_batches_X = []
         mini_batches_y = []
-        for i in range(X.shape[0]//mini_batch_size):
-            print(i)
-            X_mini_batch = X[i*mini_batch_size:(i+1)*mini_batch_size, :]
-            y_mini_batch = y[i*mini_batch_size:(i+1)*mini_batch_size, :]
+        for i in range(X.shape[1]//mini_batch_size):
+            X_mini_batch = X[:, i*mini_batch_size:(i+1)*mini_batch_size]
+            y_mini_batch = y[:, i*mini_batch_size:(i+1)*mini_batch_size]
             mini_batches_X.append(X_mini_batch)
             mini_batches_y.append(y_mini_batch)
 
@@ -96,15 +95,11 @@ class Network:
                 delta = self.loss(y_true, y_pred) * self.layers[-1].z
                 errors.append(delta)
 
-                print('LAYERS:', len(self.layers))
-
-                for i in range(len(self.layers)-2, -1, -1):
-                    print(i)
-                    delta = np.dot(self.layers[i+1].weights.transpose(), delta) * self.layers[i].activation(self.layers[i].z)
-                    errors.append(delta)
-
-
-
+                for i in range(2, len(self.layers)+1):
+                    o = self.layers[-i].a
+                    print(o)
+                #    delta = np.dot(self.layers[i+1].weights.transpose(), delta) * self.layers[i].activation(self.layers[i].z)
+                #    errors.append(delta)
 
 
             print('Epoch ' + str(epoch+1) + '/' + str(epochs))
@@ -114,16 +109,14 @@ class Network:
 
 
 model = Network(loss=MSE())
-model.add(Dense(2, 10, activation=Linear()))
+model.add(Dense(100, 50, activation=Linear()))
+model.add(Dense(50, 10, activation=Linear()))
 model.add(Dense(10, 10, activation=Linear()))
-model.add(Dense(10, 10, activation=Linear()))
-model.add(Dense(10, 1, activation=Linear()))
+model.add(Dense(10, 5, activation=Linear()))
 
 
-X_train = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-y_train = np.array([[0, 0], [0, 0], [0, 0], [1, 0]])
+X_train = np.random.random(size=(100, 1000))
+y_train = np.random.random(size=(5, 1000))
 
-Y = model.predict(X_train)
-print(Y.shape, Y)
 
-model.fit(X_train, y_train, epochs=10, mini_batch_size=2, learning_rate=0.001)
+model.fit(X_train, y_train, epochs=1, mini_batch_size=1000, learning_rate=0.001)
