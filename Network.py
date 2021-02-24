@@ -12,23 +12,26 @@ class Layer:
     def forward(self, input):
         raise NotImplementedError
 
+    def backward(self, output_error):
+        raise NotImplementedError
 
-class Linear:
+
+class Sigmoid:
     def __init__(self):
         pass
 
     def __call__(self, x):
-        return x
+        return 1 / (1 + np.exp(-x))
 
-    def derivative(self):
-        return 1.0
+    def derivative(self, x):
+        return np.exp(-x) / (1 + np.exp(-x))**2
 
 class MSE:
     def __init__(self):
         pass
 
     def __call__(self, y_true, y_pred):
-        return np.mean(np.square(y_true - y_pred))
+        return (y_true - y_pred)**2
 
     def derivative(self, y_true, y_pred):
         return 2*np.mean(y_true - y_pred)
@@ -47,6 +50,19 @@ class Dense(Layer):
         self.z = self.z + np.tile(self.bias, (1, self.z.shape[1]))
         self.a = self.activation(self.z)
         return self.a
+
+    def backward(self, output_error):
+        '''Backpropagation/ Gradients Calculation'''
+        delta = output_error * self.activation.derivative(self.z)
+        self.grad_w = np.dot(delta, self.input.transpose()) / delta.shape[1]
+        self.grad_b = np.mean(delta, axis=1, keepdims=True)
+        return np.dot(self.weights.transpose(), delta)
+
+    def step(self, learning_rate):
+        '''SGD Weight Update'''
+        self.weights = self.weights - learning_rate * self.grad_w
+        self.bias = self.bias - learning_rate * self.grad_b
+
 
 
 class Network:
@@ -85,38 +101,33 @@ class Network:
 
         # Training Loop
         for epoch in range(epochs):
+            loss = []
             for XX, y_true in zip(mini_batches_X, mini_batches_y):
 
                 # Forward Pass
                 y_pred = self.predict(XX)
 
                 # Backward Pass
-                errors = []
-                delta = self.loss(y_true, y_pred) * self.layers[-1].z
-                errors.append(delta)
+                output_error = self.loss(y_true, y_pred)
+                loss.append(np.mean(output_error))
+                for layer in reversed(self.layers):
+                    output_error = layer.backward(output_error)
 
-                for i in range(2, len(self.layers)+1):
-                    o = self.layers[-i].a
-                    print(o)
-                #    delta = np.dot(self.layers[i+1].weights.transpose(), delta) * self.layers[i].activation(self.layers[i].z)
-                #    errors.append(delta)
+                for layer in self.layers:
+                    layer.step(learning_rate)
 
-
-            print('Epoch ' + str(epoch+1) + '/' + str(epochs))
-
-    def backprop(self, x, y):
-        pass
+            print('Epoch ' + str(epoch+1) + '/' + str(epochs), 'Loss', np.mean(loss))
 
 
 model = Network(loss=MSE())
-model.add(Dense(100, 50, activation=Linear()))
-model.add(Dense(50, 10, activation=Linear()))
-model.add(Dense(10, 10, activation=Linear()))
-model.add(Dense(10, 5, activation=Linear()))
+model.add(Dense(100, 50, activation=Sigmoid()))
+model.add(Dense(50, 10, activation=Sigmoid()))
+model.add(Dense(10, 10, activation=Sigmoid()))
+model.add(Dense(10, 5, activation=Sigmoid()))
 
 
-X_train = np.random.random(size=(100, 1000))
-y_train = np.random.random(size=(5, 1000))
+X_train = np.random.random(size=(100, 20000))
+y_train = np.random.random(size=(5, 20000))
 
 
-model.fit(X_train, y_train, epochs=1, mini_batch_size=1000, learning_rate=0.001)
+model.fit(X_train, y_train, epochs=10, mini_batch_size=5000, learning_rate=0.001)
